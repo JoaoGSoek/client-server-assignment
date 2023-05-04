@@ -109,7 +109,10 @@ public class Client{
         
         try{
 
-            InetAddress addr = Inet4Address.getLocalHost();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            String stringAddr = reader.readLine().toString();
+
+            InetAddress addr = InetAddress.getByName(stringAddr);
             hostname = addr.getHostName();
 
             server = new Socket(hostname, 17601); // Opening socket

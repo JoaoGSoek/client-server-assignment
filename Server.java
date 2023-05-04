@@ -2,9 +2,12 @@ import java.io.DataInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Iterator;
 
 public class Server {
@@ -159,12 +162,34 @@ public class Server {
 
         try {
 
-            serverIn = new ServerSocket(17601, 50, Inet4Address.getLocalHost()); // Socket de entrada
-            serverOut = new ServerSocket(041001, 50, Inet4Address.getLocalHost()); // Socket de saida
+            InetAddress addr = null;
+
+            // https://stackoverflow.com/questions/30419386/how-can-i-get-my-lan-ip-address-using-java
+            Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+            while (nics.hasMoreElements()) {
+
+                NetworkInterface nic = nics.nextElement();
+                Enumeration<InetAddress> addrs = nic.getInetAddresses();
+
+                while (addrs.hasMoreElements()) {
+
+                    addr = addrs.nextElement();
+                    if (!nic.isLoopback()) break;
+
+                }
+
+                if(addr != null) break;
+
+            }
+
+            serverIn = new ServerSocket(17601, 50, addr); // Socket de entrada
+            serverOut = new ServerSocket(041001, 50, addr); // Socket de saida
 
             System.out.println("SERVIDOR ABERTO");
             System.out.println("IP: " + serverIn.getInetAddress().getHostAddress());
             System.out.println("NOME: " + serverIn.getInetAddress().getHostName());
+
+            ClientMessagingHandler messagingThread = new ClientMessagingHandler();
 
             // Connecting new user
             while(true){
@@ -178,8 +203,7 @@ public class Server {
                 Socket clientOut = serverOut.accept();
                 clients.add(clientOut);
 
-                ClientMessagingHandler messagingThread = new ClientMessagingHandler();
-                messagingThread.start();
+                if(!messagingThread.isAlive()) messagingThread.start();
 
             }
 
