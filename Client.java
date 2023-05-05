@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -110,15 +109,20 @@ public class Client{
         try{
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            System.out.print("Digite o endereço do servidor: ");
             String stringAddr = reader.readLine().toString();
 
+            System.out.print("Digite seu apelido: ");
+            String nickname = reader.readLine().toString();
+
+            System.out.println("Estabelecendo conexão com o servidor...");
             InetAddress addr = InetAddress.getByName(stringAddr);
             hostname = addr.getHostName();
-
             server = new Socket(hostname, 17601); // Opening socket
-            System.out.println("Estabelecendo conexão com o servidor...");
 
             Request request = new Request(Request.Header.CONNECT);
+            request.data = nickname;
+
             ObjectOutputStream output = new ObjectOutputStream(server.getOutputStream());
             // output.flush();
             output.writeObject(request);

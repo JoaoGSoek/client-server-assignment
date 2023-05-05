@@ -1,7 +1,6 @@
 import java.io.DataInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -69,13 +68,15 @@ public class Server {
     
     private static class ConnectedClientRequestHandler extends Thread{
 
-        private Socket client;
+        private Socket clientIn;
+        private Socket clientOut;
+
         private String username;
 
-        ConnectedClientRequestHandler(Socket client){
+        ConnectedClientRequestHandler(Socket clientIn){
 
-            this.client = client;
-            this.username = client.getInetAddress().getHostName();
+            this.clientIn = clientIn;
+            // this.username = client.getInetAddress().getHostName();
             
         }
 
@@ -87,10 +88,10 @@ public class Server {
 
                 while(isConnected){
 
-                    boolean hasDataStream = (new DataInputStream(client.getInputStream())).available() > 0;
+                    boolean hasDataStream = (new DataInputStream(clientIn.getInputStream())).available() > 0;
                     if(hasDataStream){
 
-                        ObjectInputStream input = new ObjectInputStream(client.getInputStream());
+                        ObjectInputStream input = new ObjectInputStream(clientIn.getInputStream());
                         Request request = (Request) input.readObject();
                         int type = request.getType();
 
@@ -98,12 +99,19 @@ public class Server {
 
                             case Request.Header.CONNECT:
                                 
-                                ObjectOutputStream connectOutput = new ObjectOutputStream(client.getOutputStream());
-                                connectOutput.writeObject(new Response(true));
+                                this.username = request.data;
+                                System.out.println(this.username + " CONECTADO");
+
+                                messages.add(username + " CONECTADO");
                                 hasNewMessage = true;
+
+                                ObjectOutputStream connectOutput = new ObjectOutputStream(clientIn.getOutputStream());
+                                connectOutput.writeObject(new Response(true));
 
                             break;
                             case Request.Header.MESSAGE:
+
+                                System.out.println(this.username + " ENVIOU UMA MENSAGEM");
 
                                 messages.add(username + " diz: " + request.data); // Adding message to message list
                                 hasNewMessage = true;
@@ -111,32 +119,23 @@ public class Server {
                             break;
                             case Request.Header.DISCONNECT:
 
-                                System.out.println("Requisição de saida recebida");
-                                Iterator<Socket> clientIterator = clients.iterator();
+                                System.out.println("DESCONECTANDO " + this.username);
 
-                                while(clientIterator.hasNext()){
+                                clients.remove(this.clientOut);
+                                isConnected = false;
+                                messages.add(username + " DESCONECTADO");
 
-                                    Socket clientOut = clientIterator.next();
-                                    String coUsername = clientOut.getInetAddress().getHostName();
+                                System.out.println(this.username + " DESCONECTADO");
+                                hasNewMessage = true;
 
-                                    if(coUsername.equals(username)){
-
-                                        ObjectOutputStream disconnectOutput = new ObjectOutputStream(clientOut.getOutputStream());
-                                        disconnectOutput.writeObject(new Response(true));
-
-                                        clients.remove(clientOut);
-
-                                        isConnected = false;
-                                        break;
-
-                                    }
-
-                                }
+                                ObjectOutputStream disconnectOutput = new ObjectOutputStream(clientOut.getOutputStream());
+                                disconnectOutput.writeObject(new Response(true));
+                                
 
                             break;
                             default:
 
-                                ObjectOutputStream badRequestOutput = new ObjectOutputStream(client.getOutputStream());
+                                ObjectOutputStream badRequestOutput = new ObjectOutputStream(clientIn.getOutputStream());
                                 badRequestOutput.writeObject(new Response(false));
 
                             break;
@@ -153,6 +152,12 @@ public class Server {
                 e.printStackTrace();
 
             }
+
+        }
+
+        public void setClientOut(Socket clientOut) {
+
+            this.clientOut = clientOut;
 
         }
 
@@ -187,20 +192,20 @@ public class Server {
 
             System.out.println("SERVIDOR ABERTO");
             System.out.println("IP: " + serverIn.getInetAddress().getHostAddress());
-            System.out.println("NOME: " + serverIn.getInetAddress().getHostName());
 
             ClientMessagingHandler messagingThread = new ClientMessagingHandler();
 
             // Connecting new user
             while(true){
-
+                
                 Socket clientIn = serverIn.accept();
-                System.out.println(clientIn.getInetAddress().getHostName());
+                Socket clientOut = null;
 
                 ConnectedClientRequestHandler requestThread = new ConnectedClientRequestHandler(clientIn);
                 requestThread.start();
 
-                Socket clientOut = serverOut.accept();
+                clientOut = serverOut.accept();
+                requestThread.setClientOut(clientOut);
                 clients.add(clientOut);
 
                 if(!messagingThread.isAlive()) messagingThread.start();
