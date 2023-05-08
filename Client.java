@@ -32,10 +32,11 @@ public class Client{
                     
                     if(isExiting){
 
-                        if(response.successfull()){
+                        if(response.successful()){
 
                             System.out.println("Até mais!");
                             server.close();
+                            inputSocket.close();
 
                         }else{
 
@@ -130,7 +131,7 @@ public class Client{
             ObjectInputStream input = new ObjectInputStream(server.getInputStream());
             Response response = (Response) input.readObject();
 
-            if(response.successfull()){
+            if(response.successful()){
 
                 System.out.print(clearCL);
 

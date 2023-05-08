@@ -23,6 +23,6 @@ public class Response implements Serializable{
     }
 
     public String getData(){return data;}
-    public boolean successfull(){return success;}
+    public boolean successful(){return success;}
     
 }
